@@ -1,6 +1,7 @@
 import torch.nn.functional as F
 import torch
 import datetime
+import os
 
 from networks import ActorP as Actor, CriticP as Critic
 
@@ -70,6 +71,9 @@ class TD3(object):
         
     def save(self,path='./models'):
         time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        torch.save(self.actor.state_dict(),f'{path}/{time}/actor.pth')
-        torch.save(self.critic.state_dict(),f'{path}/{time}/critic.pth')
+        path = f'{path}/{time}'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        torch.save(self.actor.state_dict(),f'{path}/actor.pth')
+        torch.save(self.critic.state_dict(),f'{path}/critic.pth')
         

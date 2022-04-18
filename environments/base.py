@@ -29,6 +29,7 @@ class PortfolioEnvironment(gym.Env):
         
         self.weights = np.array([1.0]+[0.0]*(self.m))
         self.portfolio_value = 1.0
+        self.portfolio_value_units = self.initial_capital * self.portfolio_value
         
     def _buy(self,index,price,amount):
         raise NotImplementedError
@@ -81,13 +82,20 @@ class PortfolioEnvironment(gym.Env):
         
         p1 = self._portfolio_value_after_operation(action)
         
-        reward = np.log(p1/self.portfolio_value) / self.max_steps
+        #reward = np.log(p1/self.portfolio_value) / self.max_steps
         
         self.weights = action
         
         self.portfolio_value = p1
-        done = 0 if self.buffer.length-1 > self.buffer.pointer and self.current_step < self.max_steps and self.weights[0] > 0.0 else 1 
-        info = {"weights":self.weights,"value":self.portfolio_value}
+        
+        new_portfolio_value = self.initial_capital * self.portfolio_value
+        reward = new_portfolio_value - self.portfolio_value_units
+        self.portfolio_value_units = new_portfolio_value
+        
+        done = 0 if self.buffer.length-1 > self.buffer.pointer and self.current_step < self.max_steps and  self.portfolio_value_units > self.initial_capital * 0.2 else 1 
+        if done == 1:
+            print(self.weights)
+        info = {"weights":self.weights,"value":self.portfolio_value,"position":self.buffer.pointer}
         self.current_step += 1
         obs = {"data":self.buffer.get_next_batch(),"weights":self.weights}
         #print(reward)
@@ -96,6 +104,7 @@ class PortfolioEnvironment(gym.Env):
     def reset(self):
         self.weights = np.array([1.0]+[0.0]*(self.m))
         self.portfolio_value = 1.0
+        self.portfolio_value_units = self.initial_capital * self.portfolio_value
         self.current_step = 0
         self.buffer.reset()
         return {"data":self.buffer.get_batch(),"weights":self.weights}

@@ -12,5 +12,5 @@ class Actor(torch.nn.Module):
     def forward(self, x): #x: stados ,propagar hacia adelante las layers para armar la red, y agregar las funciones de activacion
         x1 = F.relu(self.layer_1(x))
         x1 = F.relu(self.layer_2(x1))
-        x1 = self.max_action * torch.softmax(self.layer_3(x1),dim=0) #la tangente hiperbolica devuelve valores entre -1 y 1, se multiplica por el max_action para acomodar ese rango
+        x1 = torch.softmax(self.layer_3(x1),dim=1) #la tangente hiperbolica devuelve valores entre -1 y 1, se multiplica por el max_action para acomodar ese rango
         return x1
