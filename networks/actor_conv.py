@@ -32,6 +32,6 @@ class Actor(tf.keras.Model):
         _bias = tf.keras.layers.Lambda(expand_dims)([_bias])
         x = tf.concat([_bias,x],1)
         x = tf.keras.layers.Flatten()(x)
-        x = tf.keras.layers.Activation('softmax')
+        x = tf.keras.layers.Activation('softmax')(x)
         return x
     
