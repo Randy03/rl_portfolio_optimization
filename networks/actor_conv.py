@@ -2,11 +2,16 @@ import tensorflow as tf
 import numpy as np
 
 
-def expand_dims(x):
-    exp = tf.expand_dims(x, axis=1)
-    exp = tf.expand_dims(exp, axis=1)
-    exp = tf.expand_dims(exp, axis=0)
-    return exp
+#def expand_dims(x):
+#    exp = tf.expand_dims(x, axis=1)
+#    exp = tf.expand_dims(exp, axis=1)
+#    exp = tf.expand_dims(exp, axis=0)
+#    return exp
+
+def expandDims(x):
+    expX = tf.expand_dims(x, axis=-1)
+    expX = tf.expand_dims(expX, axis=-1)
+    return expX
 
 class Actor(tf.keras.Model):
     def __init__(self,state_dim,action_dim,max_action):
@@ -19,17 +24,15 @@ class Actor(tf.keras.Model):
         self.max_action = max_action
         
     def call(self, obs):
-        #aca va a haber que hacer el reshape del obs para que quede (features,assets,periods)
-        _obs = tf.expand_dims(obs['data'],axis=0)
-        _weights = obs['weights']
-        _bias = _weights[0]
-        _weights = _weights[1:]
+        _obs = obs["data"]
+        _bias = tf.keras.layers.Lambda(expand_dims)(obs["weights"][:,0].reshape(-1,1))
+        _weights = tf.keras.layers.Lambda(expand_dims)(obs["weights"][:,1:])
         x = self.layer_1(_obs)
         x = self.layer_2(x)
-        _weights = tf.keras.layers.Lambda(expand_dims)(_weights)
+        #_weights = tf.keras.layers.Lambda(expand_dims)(_weights)
         x = tf.concat([x,_weights],3)
         x = self.layer_3(x)
-        _bias = tf.keras.layers.Lambda(expand_dims)([_bias])
+        #_bias = tf.keras.layers.Lambda(expand_dims)([_bias])
         x = tf.concat([_bias,x],1)
         x = tf.keras.layers.Flatten()(x)
         x = tf.keras.layers.Activation('softmax')(x)
