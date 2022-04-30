@@ -1,6 +1,17 @@
 import tensorflow as tf
-from networks import Actor, Critic
+from networks import ActorConv as Actor, CriticConv as Critic
 import datetime
+
+from tensorflow.python.ops.numpy_ops import np_config
+np_config.enable_numpy_behavior()
+
+#def reshape_state(state):
+#    if isinstance(state,dict):
+#        for key,value in state.items():
+#            state[key] = value.reshape(1,-1)
+#    else:
+#        state = state.reshape(1,-1)
+#    return state
 
 class TD3():
     def __init__(self, state_dim, action_dim, max_action,lr=3e-3):
@@ -20,7 +31,7 @@ class TD3():
         self.max_action = max_action
         
     def select_action(self, state):
-        state = state.reshape(1, -1)
+        #state = reshape_state(state)
         action = self.actor.call(state)[0].numpy()
         return action
     
@@ -36,7 +47,7 @@ class TD3():
             noise = tf.random.normal(next_action.shape, mean=0, stddev=policy_noise)
             noise = tf.clip_by_value(noise, -noise_clipping, noise_clipping)
             #next_action = tf.clip_by_value(next_action + noise, -self.max_action, self.max_action)
-            next_action = tf.nn.softmax(next_action + noise)
+            next_action = tf.nn.softmax(next_action + noise).numpy()
                         
             target_Q1,target_Q2 = self.critic_target.call(batch_next_states,next_action)
             #take minimum Q value
@@ -80,3 +91,9 @@ class TD3():
         self.actor_target.save_weights(f'{path}/{time}/actor_target')
         self.critic.save_weights(f'{path}/{time}/critic')
         self.critic_target.save_weights(f'{path}/{time}/critic_target')
+        
+    def load(self,folder_path):
+        self.actor.load_weights(f'{folder_path}/actor')
+        self.actor_target.load_weights(f'{folder_path}/actor_target')
+        self.critic.load_weights(f'{folder_path}/critic')
+        self.critic_target.load_weights(f'{folder_path}/critic_target')

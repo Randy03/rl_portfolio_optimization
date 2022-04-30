@@ -8,7 +8,7 @@ import numpy as np
 #    exp = tf.expand_dims(exp, axis=0)
 #    return exp
 
-def expandDims(x):
+def expand_dims(x):
     expX = tf.expand_dims(x, axis=-1)
     expX = tf.expand_dims(expX, axis=-1)
     return expX
@@ -25,6 +25,7 @@ class Actor(tf.keras.Model):
         
     def call(self, obs):
         _obs = obs["data"]
+        #print(type(obs["weights"]))
         _bias = tf.keras.layers.Lambda(expand_dims)(obs["weights"][:,0].reshape(-1,1))
         _weights = tf.keras.layers.Lambda(expand_dims)(obs["weights"][:,1:])
         x = self.layer_1(_obs)
