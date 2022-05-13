@@ -1,9 +1,6 @@
 import tensorflow as tf
+from .functions import expand_dims
 
-def expand_dims(x):
-    expX = tf.expand_dims(x, axis=-1)
-    expX = tf.expand_dims(expX, axis=-1)
-    return expX
 
 class Critic(tf.keras.Model):
     def __init__(self,state_dim,action_dim):

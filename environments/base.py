@@ -30,6 +30,7 @@ class PortfolioEnvironment(gym.Env):
         self.weights = np.array([1.0]+[0.0]*(self.m))
         self.portfolio_value = 1.0
         self.portfolio_value_units = self.initial_capital * self.portfolio_value
+        self.normalize = True
         
     def _buy(self,index,price,amount):
         raise NotImplementedError
@@ -41,9 +42,7 @@ class PortfolioEnvironment(gym.Env):
         '''
         returns a matrix with the division of each assets value by the previous one
         '''
-        #el problema de que la recompensa es muy baja es que los datos estan normalizados???, lo cual esta bien para el modelo
-        #pero hay que meterlos si normalizar en el vector del precio relativo???
-        prices = self.buffer.get_batch()[:,:,0].T
+        prices = self.buffer.get_batch(normalize=self.normalize)[:,:,0].T
         prices_diff = prices[1:]/prices[:-1]
         prices_diff = np.concatenate((np.ones(shape=(prices_diff.shape[0],1)),prices_diff),axis=1)
         return prices_diff
@@ -53,7 +52,7 @@ class PortfolioEnvironment(gym.Env):
         returns a vector with the weights of the portfolio after the new prices but before taking any action
         '''
         y = self._price_relative_vector()[-1]
-        #y = self.buffer.get_price_relative_vector()
+        
         return np.multiply(y,self.weights)/np.dot(y,self.weights)
     
     def _operation_cost(self,weights):
@@ -72,33 +71,30 @@ class PortfolioEnvironment(gym.Env):
         c = self._operation_cost(weights)
         p0 = self.portfolio_value
         y = self._price_relative_vector()[-1]
-        #y = self.buffer.get_price_relative_vector()
         w = self.weights
-        #print(np.dot(y, w))
-        #print(np.dot(y, w))
+        
         return p0 * (1 - c) * np.dot(y, w)
     
     def step(self, action):
-        #print(type(action))
+    
         p1 = self._portfolio_value_after_operation(action)
         
-        reward = np.log(p1/self.portfolio_value) / self.max_steps
+        #reward = np.log(p1/self.portfolio_value) / self.max_steps
         
         self.weights = action
         
         self.portfolio_value = p1
         
         new_portfolio_value = self.initial_capital * self.portfolio_value
-        #reward = new_portfolio_value - self.portfolio_value_units
+        reward = new_portfolio_value - self.portfolio_value_units
         self.portfolio_value_units = new_portfolio_value
         
-        done = 0 if self.buffer.length-1 > self.buffer.pointer and self.current_step < self.max_steps and  self.portfolio_value_units > self.initial_capital * 0.2 else 1 
-        if done == 1:
-            print(self.weights)
+        done = 0 if self.buffer.length-1 > self.buffer.pointer and self.current_step < self.max_steps-1 and  self.portfolio_value_units > self.initial_capital * 0.2 else 1 
+        
         info = {"weights":self.weights,"value":self.portfolio_value,"position":self.buffer.pointer}
         self.current_step += 1
-        obs = {"data":self.buffer.get_next_batch(),"weights":self.weights}
-        #print(reward)
+        obs = {"data":self.buffer.get_next_batch(normalize=self.normalize),"weights":self.weights}
+        
         return obs, reward, done, info
     
     def reset(self):
@@ -107,7 +103,7 @@ class PortfolioEnvironment(gym.Env):
         self.portfolio_value_units = self.initial_capital * self.portfolio_value
         self.current_step = 0
         self.buffer.reset()
-        return {"data":self.buffer.get_batch(),"weights":self.weights}
+        return {"data":self.buffer.get_batch(normalize=self.normalize),"weights":self.weights}
     
     def render(self):
         pass
@@ -135,37 +131,27 @@ class PortfolioBuffer():
         self.shape = self.data.shape
         self.window = window
         self.batch_cache = None
-        self.price_relative_vector_cache = None
         self.length = self.shape[1]
         self.pointer = random.randrange(self.window,self.length-self.window)
     
-    def get_batch(self):
+    def get_batch(self,normalize=True):
         if self.batch_cache is None:
-            batch = np.zeros(shape=(self.shape[0],self.window,self.shape[2]))
+            batch = np.zeros(shape=(self.shape[0],self.window,self.shape[2]+1))
             for index,data in enumerate(self.data):
-                batch[index] = data[self.pointer-self.window:self.pointer]/data[self.pointer-1][0]
+                batch[index] = np.concatenate((data[self.pointer-self.window:self.pointer],np.arange(1,self.window+1).reshape(-1,1)),axis=1)
+                if normalize:
+                    batch[index,:,0:self.shape[2]] /= data[self.pointer-1][0]
             self.batch_cache = batch
         return self.batch_cache
     
-    def get_next_batch(self):
+    def get_next_batch(self,normalize=True):
         self.pointer += 1
         self.batch_cache = None
-        self.price_relative_vector_cache = None
-        return self.get_batch()
+        return self.get_batch(normalize)
     
     def get_current_price(self,index):
         return self.data[index][self.pointer-1][0]
     
-    def get_price_relative_vector(self):
-        if self.price_relative_vector_cache is None:
-            batch = np.zeros(shape=(self.shape[0],2,self.shape[2]))
-            for index,data in enumerate(self.data):
-                batch[index] = data[self.pointer-2:self.pointer]
-            prices = batch[:,:,0].T
-            prices_diff = prices[1]/prices[0]
-            prices_diff = np.concatenate((np.ones(shape=(1)),prices_diff))
-            self.price_relative_vector_cache = prices_diff
-        return self.price_relative_vector_cache
     
     def reset(self,position=None):
         if not position:
@@ -173,4 +159,3 @@ class PortfolioBuffer():
         else:
             self.pointer = position
         self.batch_cache = None
-        self.price_relative_vector_cache = None

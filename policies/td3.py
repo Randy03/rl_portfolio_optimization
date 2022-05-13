@@ -85,12 +85,11 @@ class TD3():
         
         
         
-    def save(self,path='./models'):
-        time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-        self.actor.save_weights(f'{path}/{time}/actor')
-        self.actor_target.save_weights(f'{path}/{time}/actor_target')
-        self.critic.save_weights(f'{path}/{time}/critic')
-        self.critic_target.save_weights(f'{path}/{time}/critic_target')
+    def save(self,folder_path):
+        self.actor.save_weights(f'{folder_path}/actor')
+        self.actor_target.save_weights(f'{folder_path}/actor_target')
+        self.critic.save_weights(f'{folder_path}/critic')
+        self.critic_target.save_weights(f'{folder_path}/critic_target')
         
     def load(self,folder_path):
         self.actor.load_weights(f'{folder_path}/actor')
