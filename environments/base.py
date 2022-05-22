@@ -75,19 +75,19 @@ class PortfolioEnvironment(gym.Env):
         
         return p0 * (1 - c) * np.dot(y, w)
     
+    def _calculate_reward(self, p1):
+        #return np.log(p1/self.portfolio_value) / self.max_steps
+        return self.initial_capital * p1 - self.portfolio_value_units
+    
     def step(self, action):
     
         p1 = self._portfolio_value_after_operation(action)
         
-        #reward = np.log(p1/self.portfolio_value) / self.max_steps
+        reward = self._calculate_reward(p1)
         
         self.weights = action
-        
         self.portfolio_value = p1
-        
-        new_portfolio_value = self.initial_capital * self.portfolio_value
-        reward = new_portfolio_value - self.portfolio_value_units
-        self.portfolio_value_units = new_portfolio_value
+        self.portfolio_value_units = self.initial_capital * self.portfolio_value
         
         done = 0 if self.buffer.length-1 > self.buffer.pointer and self.current_step < self.max_steps-1 and  self.portfolio_value_units > self.initial_capital * 0.2 else 1 
         

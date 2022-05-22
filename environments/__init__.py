@@ -1,2 +1,3 @@
 from .base import PortfolioEnvironment
-from .test import PortfolioEnvironmentTest
+from .test import PortfolioEnvironmentTest, PortfolioEnvironmentTargetRewardTest
+from .target_reward import PortfolioEnvironmentTargetReward

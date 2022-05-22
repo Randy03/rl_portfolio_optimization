@@ -1,4 +1,5 @@
 from .base import PortfolioEnvironment
+from .target_reward import PortfolioEnvironmentTargetReward
 import numpy as np
 
 class PortfolioEnvironmentTest(PortfolioEnvironment):
@@ -11,4 +12,18 @@ class PortfolioEnvironmentTest(PortfolioEnvironment):
         self.portfolio_value_units = self.initial_capital * self.portfolio_value
         self.current_step = 0
         self.buffer.reset(self.n)
+        return {"data":self.buffer.get_batch(normalize=self.normalize),"weights":self.weights}
+    
+    
+class PortfolioEnvironmentTargetRewardTest(PortfolioEnvironmentTargetReward):
+    def __init__(self,assets_names_list,assets_data_list,target,fee,initial_capital=100000,look_back_window=50):
+        super(PortfolioEnvironmentTargetRewardTest,self).__init__(assets_names_list,assets_data_list,target,fee,initial_capital,look_back_window,len(assets_data_list[0])-look_back_window-1)
+        
+    def reset(self):
+        self.weights = np.array([1.0]+[0.0]*(self.m))
+        self.portfolio_value = 1.0
+        self.portfolio_value_units = self.initial_capital * self.portfolio_value
+        self.current_step = 0
+        self.buffer.reset(self.n)
+        self.target_amount = self.initial_capital / self.target[self.buffer.pointer]
         return {"data":self.buffer.get_batch(normalize=self.normalize),"weights":self.weights}
