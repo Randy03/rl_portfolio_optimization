@@ -123,10 +123,8 @@ class PortfolioBuffer():
             self.names[index] = value
         self.shape = assets_data_list[0].shape
         for i in assets_data_list:
-            if self.shape != i.shape:
-                raise Exception('Data must be of the same shape')
-        if len(assets_data_list) != len(assets_names_list):
-            raise Exception('The length of assets_names_list is different than the amount of assets in assets_data_list')
+            assert self.shape == i.shape,'Data must have the same shape'
+        assert len(assets_data_list) == len(assets_names_list),'The length of assets_names_list is different than the amount of assets in assets_data_list'
         self.data = assets_data_list
         self.shape = self.data.shape
         self.window = window

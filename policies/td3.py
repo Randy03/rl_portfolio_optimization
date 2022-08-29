@@ -5,33 +5,26 @@ import datetime
 from tensorflow.python.ops.numpy_ops import np_config
 np_config.enable_numpy_behavior()
 
-#def reshape_state(state):
-#    if isinstance(state,dict):
-#        for key,value in state.items():
-#            state[key] = value.reshape(1,-1)
-#    else:
-#        state = state.reshape(1,-1)
-#    return state
 
 class TD3():
     def __init__(self, state_dim, action_dim, max_action,lr=3e-3):
         self.actor = Actor(state_dim, action_dim, max_action)
         self.actor_target = Actor(state_dim, action_dim, max_action)
         for t, e in zip(self.actor_target.trainable_variables, self.actor.trainable_variables):
-            t.assign(e)
+            t.assign(e) #match actor networks
         
         self.actor_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
         
         self.critic = Critic(state_dim, action_dim)
         self.critic_target = Critic(state_dim, action_dim)
         for t, e in zip(self.critic_target.trainable_variables, self.critic.trainable_variables):
-            t.assign(e)
+            t.assign(e) #match critic networks
+        
         self.critic_optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
-        self.critic_loss_fn = tf.keras.losses.Huber()
+        self.critic_loss_fn = tf.keras.losses.MeanSquaredError()
         self.max_action = max_action
         
     def select_action(self, state):
-        #state = reshape_state(state)
         action = self.actor.call(state)[0].numpy()
         return action
     
@@ -46,8 +39,9 @@ class TD3():
             #add noise 
             noise = tf.random.normal(next_action.shape, mean=0, stddev=policy_noise)
             noise = tf.clip_by_value(noise, -noise_clipping, noise_clipping)
-            #next_action = tf.clip_by_value(next_action + noise, -self.max_action, self.max_action)
-            next_action = tf.nn.softmax(next_action + noise).numpy()
+            next_action = tf.clip_by_value(next_action + noise, 0, self.max_action) #comrntar
+            next_action = (next_action/tf.reduce_sum(next_action)).numpy() # comentar
+            #next_action = tf.nn.softmax(next_action + noise).numpy()
                         
             target_Q1,target_Q2 = self.critic_target.call(batch_next_states,next_action)
             #take minimum Q value
@@ -64,16 +58,18 @@ class TD3():
                 current_Q1, current_Q2 = self.critic.call(batch_states,batch_actions)
                 critic_loss = (self.critic_loss_fn(current_Q1,target_Q) + self.critic_loss_fn(current_Q2,target_Q))
             critic_grads = tape.gradient(critic_loss, trainable_critic_variables)
-            self.critic_optimizer.apply_gradients(zip(critic_grads, trainable_critic_variables))
+            
+            self.critic_optimizer.apply_gradients(zip(critic_grads, trainable_critic_variables)) #update gradients
                      
             #AUpdate actor model
             if i%policy_freq==0:
                 trainable_actor_variables = self.actor.trainable_variables
                 with tf.GradientTape(watch_accessed_variables=False) as tape:
                     tape.watch(trainable_actor_variables)
-                    #applying gradient ascent by taking de oposit function
+                    #applying gradient ascent by taking the oposit function
                     actor_loss = -tf.reduce_mean(self.critic.Q1(batch_states, self.actor(batch_states))) 
                 actor_grads = tape.gradient(actor_loss, trainable_actor_variables)
+                
                 self.actor_optimizer.apply_gradients(zip(actor_grads, trainable_actor_variables))
             
                 # update the weights in the critic and actor target models, the tau parameter will define how much is going to adjust
