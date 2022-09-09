@@ -27,6 +27,7 @@ class Actor(tf.keras.Model):
         x = self.layer_3(x)
         x = tf.concat([_bias,x],1)
         x = tf.keras.layers.Flatten()(x)
-        x = tf.keras.layers.Activation(custom_activation)(x)
+        #x = tf.keras.layers.Activation(custom_activation)(x)
+        x = tf.keras.activations.softmax(x)
         return x
     
